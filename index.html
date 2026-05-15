@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>qubic.design</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:  #00D230;
+      --pink:   #FF1AD9;
+      --orange: #FF6900;
+      --yellow: #FFD43A;
+      --white:  #ffffff;
+      --black:  #000000;
+    }
+
+    html, body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ─────────────────────────────────────────────────────── */
+    .nav {
+      position: relative;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      padding: 18px 32px;
+      border-bottom: 1px solid rgba(255,255,255,0.18);
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .nav-wordmark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: Georgia, serif;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      text-transform: none;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .nav-mark {
+      display: grid;
+      grid-template-columns: repeat(3, 4px);
+      grid-template-rows: repeat(3, 4px);
+      gap: 2px;
+    }
+    .nav-mark span { display: block; width: 4px; height: 4px; background: #fff; }
+    .nav-mark span:last-child { background: var(--green); }
+
+    .nav-links {
+      display: flex;
+      gap: 22px;
+      align-items: center;
+      color: rgba(255,255,255,0.78);
+    }
+    .nav-links a { color: inherit; text-decoration: none; transition: color 200ms; }
+    .nav-links a:hover { color: #fff; }
+    .nav-sep { color: rgba(255,255,255,0.3); }
+
+    .nav-right {
+      justify-self: end;
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      color: rgba(255,255,255,0.55);
+    }
+
+    .booking-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.78);
+    }
+    .booking-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.45; transform:scale(.85); }
+    }
+
+    /* ── HERO ────────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      height: calc(100vh - 57px - 49px);
+      min-height: 600px;
+      overflow: hidden;
+    }
+
+    /* DOM shapes — synced to physics bodies */
+    .shape {
+      position: absolute;
+      top: 0; left: 0;
+      transform-origin: center center;
+      pointer-events: none;
+      will-change: transform;
+      transition: filter 120ms;
+    }
+    .shape.grabbed {
+      filter: brightness(1.25) drop-shadow(0 8px 32px rgba(255,255,255,0.18));
+    }
+
+    .shape-circle {
+      width: 220px; height: 220px;
+      border-radius: 50%;
+      background: var(--pink);
+    }
+
+    .shape-plus {
+      width: 240px; height: 240px;
+      background: var(--orange);
+      clip-path: polygon(
+        33% 0%,  67% 0%,
+        67% 33%, 100% 33%,
+        100% 67%, 67% 67%,
+        67% 100%, 33% 100%,
+        33% 67%, 0% 67%,
+        0% 33%, 33% 33%
+      );
+    }
+
+    .shape-l-yellow {
+      width: 200px; height: 270px;
+      background: var(--yellow);
+      clip-path: polygon(
+        0% 0%, 55% 0%,
+        55% 56%, 100% 56%,
+        100% 100%, 0% 100%
+      );
+    }
+
+    .shape-l-green {
+      width: 260px; height: 165px;
+      background: var(--green);
+      clip-path: polygon(
+        0% 0%,   42% 0%,
+        42% 100%, 100% 100%,
+        100% 40%, 42% 40%,
+        42% 0%,  100% 0%,
+        100% 40%, 42% 40%,
+        0% 40%
+      );
+    }
+
+    /* centered hero text */
+    .hero-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 32px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hero-headline {
+      font-family: Georgia, serif;
+      font-size: clamp(3rem, 8.5vw, 8rem);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: -0.035em;
+      color: #fff;
+      max-width: 14ch;
+    }
+
+    .hero-headline .cursor {
+      display: inline-block;
+      width: 0.45em; height: 0.78em;
+      background: var(--green);
+      margin-left: 0.06em;
+      vertical-align: -0.05em;
+      animation: blink 1.05s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .hero-ctas {
+      display: flex;
+      gap: 14px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+      pointer-events: all;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 15px 26px;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      border: 2px solid;
+      cursor: pointer;
+      transition: background 200ms, color 200ms, border-color 200ms;
+      white-space: nowrap;
+    }
+    .btn-primary { background:#fff; color:#000; border-color:#fff; }
+    .btn-primary:hover { background:var(--green); border-color:var(--green); color:#000; }
+    .btn-ghost { background:transparent; color:#fff; border-color:rgba(255,255,255,.55); }
+    .btn-ghost:hover { background:#fff; color:#000; border-color:#fff; }
+
+    /* ── HAND TRACKING CANVAS ────────────────────────────────────── */
+    #hand-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    /* ── CAMERA FEED — bottom-left corner ────────────────────────── */
+    .cam-wrap {
+      position: fixed;
+      bottom: 64px;
+      left: 24px;
+      z-index: 200;
+      width: 200px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: #0a0a0a;
+      overflow: hidden;
+    }
+    .cam-label {
+      position: absolute;
+      top: 6px; left: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .cam-label-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    #cam-video {
+      width: 200px;
+      height: 150px;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1); /* mirror */
+      opacity: 0.88;
+    }
+
+    /* ── STATUS PILL ─────────────────────────────────────────────── */
+    #ht-status {
+      position: fixed;
+      bottom: 224px;
+      left: 24px;
+      z-index: 200;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #ht-status-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transition: background 200ms;
+    }
+    #ht-status-dot.active  { background: var(--green); }
+    #ht-status-dot.pinched { background: var(--pink); }
+
+    /* ── BOTTOM STRIP ────────────────────────────────────────────── */
+    .bottom-strip {
+      position: relative;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: center;
+      padding: 16px 32px;
+      border-top: 1px solid rgba(255,255,255,0.18);
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+    }
+    .bottom-strip .center {
+      justify-self: center;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bottom-strip .center-dot { width: 6px; height: 6px; background: var(--green); }
+    .bottom-strip .right { justify-self: end; }
+
+    @media (max-width: 768px) {
+      .nav { grid-template-columns: 1fr auto; padding: 14px 20px; }
+      .nav-links { display: none; }
+      .nav-right .studio-label { display: none; }
+      .bottom-strip { grid-template-columns: 1fr auto 1fr; font-size: 10px; padding: 14px 20px; }
+      .cam-wrap { width: 140px; bottom: 60px; }
+      #cam-video { width: 140px; height: 105px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a class="nav-wordmark" href="#">
+    <div class="nav-mark">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    qubic<span style="color:var(--green)">.</span>design
+  </a>
+  <div class="nav-links">
+    <a href="#">Work</a><span class="nav-sep">/</span>
+    <a href="#">Studio</a><span class="nav-sep">/</span>
+    <a href="#">Journal</a><span class="nav-sep">/</span>
+    <a href="#">Contact</a>
+  </div>
+  <div class="nav-right">
+    <span class="studio-label">// Independent studio</span>
+    <div class="booking-badge">
+      <span class="booking-dot"></span>Booking · Q3
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="shape shape-circle"   id="s-circle"></div>
+  <div class="shape shape-plus"     id="s-plus"></div>
+  <div class="shape shape-l-yellow" id="s-lyellow"></div>
+  <div class="shape shape-l-green"  id="s-lgreen"></div>
+
+  <!-- Hand tracking overlay -->
+  <canvas id="hand-canvas"></canvas>
+
+  <div class="hero-content">
+    <h1 class="hero-headline">
+      Interfaces built with intent.<span class="cursor" aria-hidden="true"></span>
+    </h1>
+    <div class="hero-ctas">
+      <a href="#" class="btn btn-primary">View selected work &rarr;</a>
+      <a href="#" class="btn btn-ghost">Start a project</a>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM STRIP -->
+<footer class="bottom-strip">
+  <span>001 &mdash; Hero / index</span>
+  <span class="center"><span class="center-dot"></span>Scroll to enter &darr;</span>
+  <span class="right">v.2024 / Brooklyn &middot; Lisbon</span>
+</footer>
+
+<!-- Camera feed -->
+<div class="cam-wrap">
+  <div class="cam-label">
+    <span class="cam-label-dot"></span>
+    Live cam
+  </div>
+  <video id="cam-video" autoplay playsinline muted></video>
+</div>
+
+<!-- Hand tracking status -->
+<div id="ht-status">
+  <span id="ht-status-dot"></span>
+  <span id="ht-status-text">Loading hand tracking…</span>
+</div>
+
+<!-- Matter.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+<!-- MediaPipe Hands -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+
+<script>
+/* ================================================================
+   PHYSICS — Matter.js
+   ================================================================ */
+(function initPhysics() {
+  const { Engine, Runner, Bodies, Body, World, Mouse, MouseConstraint,
+          Composite, Query, Constraint } = Matter;
+
+  const hero = document.getElementById('hero');
+  function W() { return hero.clientWidth; }
+  function H() { return hero.clientHeight; }
+
+  const engine = Engine.create({ gravity: { x: 0, y: 1.4 } });
+  const world  = engine.world;
+
+  // ── Bounds ──────────────────────────────────────────────────────
+  function makeBounds() {
+    const t = 80;
+    return [
+      Bodies.rectangle(W()/2, H()+t/2,  W()*3, t,   { isStatic:true }),
+      Bodies.rectangle(-t/2,  H()/2,    t, H()*3,   { isStatic:true }),
+      Bodies.rectangle(W()+t/2, H()/2,  t, H()*3,   { isStatic:true }),
+      Bodies.rectangle(W()/2, -t/2,     W()*3, t,   { isStatic:true }),
+    ];
+  }
+  let bounds = makeBounds();
+  World.add(world, bounds);
+
+  // ── Shape bodies ────────────────────────────────────────────────
+  const circleR = 110;
+  const bCircle = Bodies.circle(W()*0.17, H()*0.28, circleR,
+    { restitution:0.55, friction:0.3, frictionAir:0.012, label:'circle' });
+
+  const plusSz = 240, arm = plusSz/3;
+  const bPlus = Body.create({ label:'plus', restitution:0.45, friction:0.3, frictionAir:0.012,
+    parts:[
+      Bodies.rectangle(0, 0, plusSz, arm),
+      Bodies.rectangle(0, 0, arm, plusSz),
+    ]
+  });
+  Body.setPosition(bPlus, { x: W()*0.82, y: H()*0.26 });
+
+  const bLyellow = Body.create({ label:'lyellow', restitution:0.4, friction:0.35, frictionAir:0.015,
+    parts:[
+      Bodies.rectangle(0,   -65, 110, 140),
+      Bodies.rectangle(45,   65, 200, 110),
+    ]
+  });
+  Body.setPosition(bLyellow, { x: W()*0.32, y: H()*0.52 });
+
+  const bLgreen = Body.create({ label:'lgreen', restitution:0.5, friction:0.3, frictionAir:0.012,
+    parts:[
+      Bodies.rectangle(0,  -32, 260, 66),
+      Bodies.rectangle(-80, 32, 100, 66),
+    ]
+  });
+  Body.setPosition(bLgreen, { x: W()*0.73, y: H()*0.60 });
+
+  [bCircle, bPlus, bLyellow, bLgreen].forEach(b => {
+    Body.setVelocity(b,        { x: (Math.random()-.5)*4, y: -1.5 });
+    Body.setAngularVelocity(b, (Math.random()-.5)*0.05);
+  });
+  World.add(world, [bCircle, bPlus, bLyellow, bLgreen]);
+
+  // ── DOM sync ────────────────────────────────────────────────────
+  const domShapes = [
+    { el: document.getElementById('s-circle'),  body: bCircle,  w: 220, h: 220 },
+    { el: document.getElementById('s-plus'),    body: bPlus,    w: 240, h: 240 },
+    { el: document.getElementById('s-lyellow'), body: bLyellow, w: 200, h: 270 },
+    { el: document.getElementById('s-lgreen'),  body: bLgreen,  w: 260, h: 165 },
+  ];
+
+  function syncDOM() {
+    for (const { el, body, w, h } of domShapes) {
+      const { x, y } = body.position;
+      el.style.transform =
+        `translate(${x - w/2}px, ${y - h/2}px) rotate(${body.angle}rad)`;
+    }
+  }
+
+  // ── Mouse grab ──────────────────────────────────────────────────
+  const mouse = Mouse.create(hero);
+  mouse.element.removeEventListener('mousewheel',     mouse.mousewheel);
+  mouse.element.removeEventListener('DOMMouseScroll', mouse.mousewheel);
+  const mc = MouseConstraint.create(engine, {
+    mouse,
+    constraint: { stiffness: 0.2, render: { visible: false } }
+  });
+  World.add(world, mc);
+
+  // ── Hand grab ───────────────────────────────────────────────────
+  let handConstraint = null;
+  let handPinching   = false;
+  let grabbedEl      = null;
+
+  function heroCoords(nx, ny) {
+    // nx,ny are normalized [0,1] from MediaPipe (x is already mirrored via CSS)
+    // Mirror x back to match screen (CSS mirrors the video, we flip x here too)
+    return { x: (1 - nx) * W(), y: ny * H() };
+  }
+
+  window.updateHandGrab = function(nx, ny, isPinched) {
+    const { x, y } = heroCoords(nx, ny);
+
+    if (isPinched && !handPinching) {
+      // Try to grab a body at this point
+      const hits = Query.point(Composite.allBodies(world), { x, y });
+      const target = hits.find(b => !b.isStatic);
+      if (target) {
+        const offsetX = x - target.position.x;
+        const offsetY = y - target.position.y;
+        handConstraint = Constraint.create({
+          pointA: { x, y },
+          bodyB:  target,
+          pointB: { x: offsetX, y: offsetY },
+          stiffness: 0.2,
+          length: 0,
+        });
+        World.add(world, handConstraint);
+        // Highlight grabbed shape
+        const ds = domShapes.find(d => d.body === target);
+        if (ds) { grabbedEl = ds.el; grabbedEl.classList.add('grabbed'); }
+      }
+      handPinching = true;
+
+    } else if (isPinched && handPinching && handConstraint) {
+      // Drag
+      handConstraint.pointA.x = x;
+      handConstraint.pointA.y = y;
+
+    } else if (!isPinched && handPinching) {
+      // Release
+      if (handConstraint) {
+        World.remove(world, handConstraint);
+        handConstraint = null;
+      }
+      if (grabbedEl) { grabbedEl.classList.remove('grabbed'); grabbedEl = null; }
+      handPinching = false;
+    }
+  };
+
+  // ── Runner ──────────────────────────────────────────────────────
+  Runner.run(Runner.create(), engine);
+
+  (function loop() { syncDOM(); requestAnimationFrame(loop); })();
+
+  window.addEventListener('resize', () => {
+    bounds.forEach(b => World.remove(world, b));
+    bounds = makeBounds();
+    World.add(world, bounds);
+  });
+})();
+
+
+/* ================================================================
+   HAND TRACKING — MediaPipe Hands
+   ================================================================ */
+(function initHandTracking() {
+  const video     = document.getElementById('cam-video');
+  const canvas    = document.getElementById('hand-canvas');
+  const ctx       = canvas.getContext('2d');
+  const hero      = document.getElementById('hero');
+  const statusDot = document.getElementById('ht-status-dot');
+  const statusTxt = document.getElementById('ht-status-text');
+
+  // Resize canvas to match hero
+  function resizeCanvas() {
+    canvas.width  = hero.clientWidth;
+    canvas.height = hero.clientHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // Landmark indices
+  const THUMB_TIP = 4;
+  const INDEX_TIP = 8;
+  const WRIST     = 0;
+
+  // Pinch threshold (normalized distance)
+  const PINCH_THRESHOLD = 0.065;
+  const PINCH_RELEASE   = 0.085;
+  let wasPinched = false;
+
+  // Finger colors
+  const FINGER_COLOR  = 'rgba(255,255,255,0.75)';
+  const PINCH_COLOR   = '#FF1AD9';
+  const JOINT_COLOR   = 'rgba(255,255,255,0.55)';
+
+  // Draw connections between landmarks
+  const CONNECTIONS = [
+    [0,1],[1,2],[2,3],[3,4],           // thumb
+    [0,5],[5,6],[6,7],[7,8],           // index
+    [0,9],[9,10],[10,11],[11,12],      // middle
+    [0,13],[13,14],[14,15],[15,16],    // ring
+    [0,17],[17,18],[18,19],[19,20],    // pinky
+    [5,9],[9,13],[13,17],              // palm
+  ];
+
+  function lm2px(lm) {
+    // Mirror x (camera is mirrored in CSS, so we mirror back for hit-test)
+    // For drawing on canvas we also mirror so skeleton matches visual
+    return {
+      x: (1 - lm.x) * canvas.width,
+      y: lm.y       * canvas.height,
+    };
+  }
+
+  function drawHand(landmarks, pinched) {
+    const lineColor = pinched ? PINCH_COLOR : FINGER_COLOR;
+
+    // Connections
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth   = 2;
+    ctx.lineCap     = 'round';
+    for (const [a, b] of CONNECTIONS) {
+      const pa = lm2px(landmarks[a]);
+      const pb = lm2px(landmarks[b]);
+      ctx.beginPath();
+      ctx.moveTo(pa.x, pa.y);
+      ctx.lineTo(pb.x, pb.y);
+      ctx.globalAlpha = 0.7;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // Joints
+    for (let i = 0; i < landmarks.length; i++) {
+      const p = lm2px(landmarks[i]);
+      const isKey = (i === THUMB_TIP || i === INDEX_TIP);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, isKey ? 7 : 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = isKey ? lineColor : JOINT_COLOR;
+      ctx.fill();
+    }
+
+    // Pinch indicator between thumb & index
+    const thumb = lm2px(landmarks[THUMB_TIP]);
+    const index = lm2px(landmarks[INDEX_TIP]);
+    const mx = (thumb.x + index.x) / 2;
+    const my = (thumb.y + index.y) / 2;
+
+    if (pinched) {
+      // Filled circle at grab point
+      ctx.beginPath();
+      ctx.arc(mx, my, 14, 0, Math.PI * 2);
+      ctx.fillStyle = PINCH_COLOR;
+      ctx.globalAlpha = 0.35;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = PINCH_COLOR;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      // Open circle
+      ctx.beginPath();
+      ctx.arc(mx, my, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+
+  function onResults(results) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+      statusDot.className = '';
+      statusTxt.textContent = 'No hand detected';
+      // Release any grab
+      if (wasPinched) {
+        window.updateHandGrab(0.5, 0.5, false);
+        wasPinched = false;
+      }
+      return;
+    }
+
+    // Use first detected hand
+    const landmarks = results.multiHandLandmarks[0];
+    const thumb = landmarks[THUMB_TIP];
+    const index = landmarks[INDEX_TIP];
+
+    const dx = thumb.x - index.x;
+    const dy = thumb.y - index.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    // Hysteresis for pinch
+    let pinched = wasPinched
+      ? dist < PINCH_RELEASE
+      : dist < PINCH_THRESHOLD;
+    wasPinched = pinched;
+
+    // Pinch center point (normalized)
+    const nx = (thumb.x + index.x) / 2;
+    const ny = (thumb.y + index.y) / 2;
+
+    // Update physics grab
+    window.updateHandGrab(nx, ny, pinched);
+
+    // Draw skeleton
+    drawHand(landmarks, pinched);
+
+    // Update status
+    statusDot.className = pinched ? 'pinched' : 'active';
+    statusTxt.textContent = pinched ? 'Pinch — grabbing' : 'Hand detected';
+  }
+
+  // Init MediaPipe Hands
+  const hands = new Hands({
+    locateFile: file =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+  });
+
+  hands.setOptions({
+    maxNumHands:      1,
+    modelComplexity:  1,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence:  0.6,
+  });
+
+  hands.onResults(onResults);
+
+  // Start camera
+  const camera = new Camera(video, {
+    onFrame: async () => { await hands.send({ image: video }); },
+    width: 640,
+    height: 480,
+  });
+
+  camera.start()
+    .then(() => {
+      statusTxt.textContent = 'Hand tracking ready';
+    })
+    .catch(err => {
+      statusTxt.textContent = 'Camera denied';
+      statusDot.className = '';
+      console.warn('Camera error:', err);
+    });
+})();
+</script>
+</body>
+</html>
