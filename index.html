@@ -409,7 +409,7 @@
   function W() { return hero.clientWidth; }
   function H() { return hero.clientHeight; }
 
-  const engine = Engine.create({ gravity: { x: 0, y: 1.4 } });
+  const engine = Engine.create({ gravity: { x: 0, y: 0.4 } });
   const world  = engine.world;
 
   // ── Bounds ──────────────────────────────────────────────────────
@@ -429,11 +429,11 @@
   // Circle — Vector.svg 191×191
   const circleR = 95;
   const bCircle = Bodies.circle(W()*0.17, H()*0.28, circleR,
-    { restitution:0.55, friction:0.3, frictionAir:0.012, label:'circle' });
+    { restitution:0.55, friction:0.3, frictionAir:0.003, label:'circle' });
 
   // Plus — Vector-1.svg 279×279
   const plusSz = 279, arm = plusSz/3;
-  const bPlus = Body.create({ label:'plus', restitution:0.45, friction:0.3, frictionAir:0.012,
+  const bPlus = Body.create({ label:'plus', restitution:0.45, friction:0.3, frictionAir:0.003,
     parts:[
       Bodies.rectangle(0, 0, plusSz, arm),
       Bodies.rectangle(0, 0, arm, plusSz),
@@ -442,7 +442,7 @@
   Body.setPosition(bPlus, { x: W()*0.82, y: H()*0.26 });
 
   // Yellow — Vector-3.svg 374×265 (angled L, approx compound)
-  const bLyellow = Body.create({ label:'lyellow', restitution:0.4, friction:0.35, frictionAir:0.015,
+  const bLyellow = Body.create({ label:'lyellow', restitution:0.4, friction:0.35, frictionAir:0.003,
     parts:[
       Bodies.rectangle(0,   -65, 150, 140),
       Bodies.rectangle(60,   65, 260, 110),
@@ -452,7 +452,7 @@
 
   // Green — Vector-2.svg 301×176 (angled shape, approx rectangle)
   const bLgreen = Bodies.rectangle(0, 0, 280, 160,
-    { restitution:0.5, friction:0.3, frictionAir:0.012, label:'lgreen' });
+    { restitution:0.5, friction:0.3, frictionAir:0.003, label:'lgreen' });
   Body.setPosition(bLgreen, { x: W()*0.73, y: H()*0.60 });
 
   [bCircle, bPlus, bLyellow, bLgreen].forEach(b => {
@@ -487,55 +487,55 @@
   });
   World.add(world, mc);
 
-  // ── Hand grab ───────────────────────────────────────────────────
-  let handConstraint = null;
-  let handPinching   = false;
-  let grabbedEl      = null;
+  // ── Hand grab (supports two independent hands) ──────────────────
+  // One state object per hand index (0 = first hand, 1 = second hand)
+  const handState = [0, 1].map(() => ({
+    constraint: null,
+    pinching:   false,
+    grabbedEl:  null,
+  }));
 
   function heroCoords(nx, ny) {
-    // nx,ny are normalized [0,1] from MediaPipe (x is already mirrored via CSS)
-    // Mirror x back to match screen (CSS mirrors the video, we flip x here too)
     return { x: (1 - nx) * W(), y: ny * H() };
   }
 
-  window.updateHandGrab = function(nx, ny, isPinched) {
+  window.updateHandGrab = function(handIdx, nx, ny, isPinched) {
+    const state = handState[handIdx];
     const { x, y } = heroCoords(nx, ny);
 
-    if (isPinched && !handPinching) {
-      // Try to grab a body at this point
-      const hits = Query.point(Composite.allBodies(world), { x, y });
+    if (isPinched && !state.pinching) {
+      const hits   = Query.point(Composite.allBodies(world), { x, y });
       const target = hits.find(b => !b.isStatic);
       if (target) {
-        const offsetX = x - target.position.x;
-        const offsetY = y - target.position.y;
-        handConstraint = Constraint.create({
+        state.constraint = Constraint.create({
           pointA: { x, y },
           bodyB:  target,
-          pointB: { x: offsetX, y: offsetY },
+          pointB: { x: x - target.position.x, y: y - target.position.y },
           stiffness: 0.2,
           length: 0,
         });
-        World.add(world, handConstraint);
-        // Highlight grabbed shape
+        World.add(world, state.constraint);
         const ds = domShapes.find(d => d.body === target);
-        if (ds) { grabbedEl = ds.el; grabbedEl.classList.add('grabbed'); }
+        if (ds) { state.grabbedEl = ds.el; ds.el.classList.add('grabbed'); }
       }
-      handPinching = true;
+      state.pinching = true;
 
-    } else if (isPinched && handPinching && handConstraint) {
-      // Drag
-      handConstraint.pointA.x = x;
-      handConstraint.pointA.y = y;
+    } else if (isPinched && state.pinching && state.constraint) {
+      state.constraint.pointA.x = x;
+      state.constraint.pointA.y = y;
 
-    } else if (!isPinched && handPinching) {
-      // Release
-      if (handConstraint) {
-        World.remove(world, handConstraint);
-        handConstraint = null;
-      }
-      if (grabbedEl) { grabbedEl.classList.remove('grabbed'); grabbedEl = null; }
-      handPinching = false;
+    } else if (!isPinched && state.pinching) {
+      if (state.constraint) { World.remove(world, state.constraint); state.constraint = null; }
+      if (state.grabbedEl)  { state.grabbedEl.classList.remove('grabbed'); state.grabbedEl = null; }
+      state.pinching = false;
     }
+  };
+
+  // Release all grabs (called when no hands detected)
+  window.releaseAllGrabs = function() {
+    handState.forEach((state, i) => {
+      if (state.pinching) window.updateHandGrab(i, 0.5, 0.5, false);
+    });
   };
 
   // ── Runner ──────────────────────────────────────────────────────
@@ -570,15 +570,14 @@
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  // Landmark indices
   const THUMB_TIP = 4;
   const INDEX_TIP = 8;
-  const WRIST     = 0;
 
-  // Pinch threshold (normalized distance)
   const PINCH_THRESHOLD = 0.065;
   const PINCH_RELEASE   = 0.085;
-  let wasPinched = false;
+
+  // Per-hand pinch state (hysteresis)
+  const wasPinched = [false, false];
 
   // Finger colors
   const FINGER_COLOR  = 'rgba(255,255,255,0.75)';
@@ -662,45 +661,50 @@
   function onResults(results) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    const detected = results.multiHandLandmarks || [];
+
+    if (detected.length === 0) {
       statusDot.className = '';
       statusTxt.textContent = 'No hand detected';
-      // Release any grab
-      if (wasPinched) {
-        window.updateHandGrab(0.5, 0.5, false);
-        wasPinched = false;
-      }
+      window.releaseAllGrabs();
       return;
     }
 
-    // Use first detected hand
-    const landmarks = results.multiHandLandmarks[0];
-    const thumb = landmarks[THUMB_TIP];
-    const index = landmarks[INDEX_TIP];
+    // Release grabs for hands that disappeared
+    for (let i = detected.length; i < 2; i++) {
+      window.updateHandGrab(i, 0.5, 0.5, false);
+      wasPinched[i] = false;
+    }
 
-    const dx = thumb.x - index.x;
-    const dy = thumb.y - index.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
+    const pinchStates = [];
 
-    // Hysteresis for pinch
-    let pinched = wasPinched
-      ? dist < PINCH_RELEASE
-      : dist < PINCH_THRESHOLD;
-    wasPinched = pinched;
+    for (let i = 0; i < Math.min(detected.length, 2); i++) {
+      const landmarks = detected[i];
+      const thumb = landmarks[THUMB_TIP];
+      const index = landmarks[INDEX_TIP];
 
-    // Pinch center point (normalized)
-    const nx = (thumb.x + index.x) / 2;
-    const ny = (thumb.y + index.y) / 2;
+      const dx   = thumb.x - index.x;
+      const dy   = thumb.y - index.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
 
-    // Update physics grab
-    window.updateHandGrab(nx, ny, pinched);
+      const pinched = wasPinched[i]
+        ? dist < PINCH_RELEASE
+        : dist < PINCH_THRESHOLD;
+      wasPinched[i] = pinched;
 
-    // Draw skeleton
-    drawHand(landmarks, pinched);
+      const nx = (thumb.x + index.x) / 2;
+      const ny = (thumb.y + index.y) / 2;
 
-    // Update status
-    statusDot.className = pinched ? 'pinched' : 'active';
-    statusTxt.textContent = pinched ? 'Pinch — grabbing' : 'Hand detected';
+      window.updateHandGrab(i, nx, ny, pinched);
+      drawHand(landmarks, pinched);
+      pinchStates.push(pinched);
+    }
+
+    const anyPinched = pinchStates.some(Boolean);
+    statusDot.className = anyPinched ? 'pinched' : 'active';
+    statusTxt.textContent = detected.length === 2
+      ? (anyPinched ? 'Both hands — grabbing' : 'Both hands detected')
+      : (anyPinched ? 'Pinch — grabbing' : 'Hand detected');
   }
 
   // Init MediaPipe Hands
@@ -710,7 +714,7 @@
   });
 
   hands.setOptions({
-    maxNumHands:      1,
+    maxNumHands:      2,
     modelComplexity:  1,
     minDetectionConfidence: 0.7,
     minTrackingConfidence:  0.6,
