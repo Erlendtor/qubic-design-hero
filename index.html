@@ -5,6 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>qubic.design</title>
   <style>
+    @font-face {
+      font-family: "Mozilla Headline";
+      src: url("fonts/MozillaHeadline-Variable.ttf") format("truetype");
+      font-weight: 200 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Mozilla Headline";
+      src: url("fonts/MozillaHeadlineItalic-Variable.ttf") format("truetype");
+      font-weight: 200 700;
+      font-style: italic;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Mozilla Text";
+      src: url("fonts/MozillaText-Variable.ttf") format("truetype");
+      font-weight: 400 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "Mozilla Text";
+      src: url("fonts/MozillaTextItalic-Variable.ttf") format("truetype");
+      font-weight: 400 700;
+      font-style: italic;
+      font-display: swap;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -19,7 +48,7 @@
     html, body {
       background: var(--black);
       color: var(--white);
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'Mozilla Text', 'Inter', system-ui, sans-serif;
       min-height: 100vh;
       overflow-x: hidden;
     }
@@ -43,7 +72,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      font-family: Georgia, serif;
+      font-family: 'Mozilla Headline', Georgia, serif;
       font-size: 17px;
       font-weight: 700;
       letter-spacing: -0.02em;
@@ -119,47 +148,7 @@
       filter: brightness(1.25) drop-shadow(0 8px 32px rgba(255,255,255,0.18));
     }
 
-    .shape-circle {
-      width: 220px; height: 220px;
-      border-radius: 50%;
-      background: var(--pink);
-    }
-
-    .shape-plus {
-      width: 240px; height: 240px;
-      background: var(--orange);
-      clip-path: polygon(
-        33% 0%,  67% 0%,
-        67% 33%, 100% 33%,
-        100% 67%, 67% 67%,
-        67% 100%, 33% 100%,
-        33% 67%, 0% 67%,
-        0% 33%, 33% 33%
-      );
-    }
-
-    .shape-l-yellow {
-      width: 200px; height: 270px;
-      background: var(--yellow);
-      clip-path: polygon(
-        0% 0%, 55% 0%,
-        55% 56%, 100% 56%,
-        100% 100%, 0% 100%
-      );
-    }
-
-    .shape-l-green {
-      width: 260px; height: 165px;
-      background: var(--green);
-      clip-path: polygon(
-        0% 0%,   42% 0%,
-        42% 100%, 100% 100%,
-        100% 40%, 42% 40%,
-        42% 0%,  100% 0%,
-        100% 40%, 42% 40%,
-        0% 40%
-      );
-    }
+    .shape img { display: block; width: 100%; height: 100%; }
 
     /* centered hero text */
     .hero-content {
@@ -176,7 +165,7 @@
     }
 
     .hero-headline {
-      font-family: Georgia, serif;
+      font-family: 'Mozilla Headline', Georgia, serif;
       font-size: clamp(3rem, 8.5vw, 8rem);
       font-weight: 700;
       line-height: 0.95;
@@ -208,7 +197,7 @@
       display: inline-flex;
       align-items: center;
       padding: 15px 26px;
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'Mozilla Text', 'Inter', system-ui, sans-serif;
       font-weight: 500;
       font-size: 15px;
       letter-spacing: 0.01em;
@@ -358,10 +347,11 @@
 
 <!-- HERO -->
 <section class="hero" id="hero">
-  <div class="shape shape-circle"   id="s-circle"></div>
-  <div class="shape shape-plus"     id="s-plus"></div>
-  <div class="shape shape-l-yellow" id="s-lyellow"></div>
-  <div class="shape shape-l-green"  id="s-lgreen"></div>
+  <!-- SVG shapes from vectors/ — sized to natural SVG dimensions -->
+  <div class="shape" id="s-circle"  style="width:191px;height:191px"><img src="vectors/Hero/Vector.svg"   alt=""></div>
+  <div class="shape" id="s-plus"    style="width:279px;height:279px"><img src="vectors/Hero/Vector-1.svg" alt=""></div>
+  <div class="shape" id="s-lgreen"  style="width:301px;height:176px"><img src="vectors/Hero/Vector-2.svg" alt=""></div>
+  <div class="shape" id="s-lyellow" style="width:374px;height:265px"><img src="vectors/Hero/Vector-3.svg" alt=""></div>
 
   <!-- Hand tracking overlay -->
   <canvas id="hand-canvas"></canvas>
@@ -436,11 +426,13 @@
   World.add(world, bounds);
 
   // ── Shape bodies ────────────────────────────────────────────────
-  const circleR = 110;
+  // Circle — Vector.svg 191×191
+  const circleR = 95;
   const bCircle = Bodies.circle(W()*0.17, H()*0.28, circleR,
     { restitution:0.55, friction:0.3, frictionAir:0.012, label:'circle' });
 
-  const plusSz = 240, arm = plusSz/3;
+  // Plus — Vector-1.svg 279×279
+  const plusSz = 279, arm = plusSz/3;
   const bPlus = Body.create({ label:'plus', restitution:0.45, friction:0.3, frictionAir:0.012,
     parts:[
       Bodies.rectangle(0, 0, plusSz, arm),
@@ -449,20 +441,18 @@
   });
   Body.setPosition(bPlus, { x: W()*0.82, y: H()*0.26 });
 
+  // Yellow — Vector-3.svg 374×265 (angled L, approx compound)
   const bLyellow = Body.create({ label:'lyellow', restitution:0.4, friction:0.35, frictionAir:0.015,
     parts:[
-      Bodies.rectangle(0,   -65, 110, 140),
-      Bodies.rectangle(45,   65, 200, 110),
+      Bodies.rectangle(0,   -65, 150, 140),
+      Bodies.rectangle(60,   65, 260, 110),
     ]
   });
-  Body.setPosition(bLyellow, { x: W()*0.32, y: H()*0.52 });
+  Body.setPosition(bLyellow, { x: W()*0.30, y: H()*0.50 });
 
-  const bLgreen = Body.create({ label:'lgreen', restitution:0.5, friction:0.3, frictionAir:0.012,
-    parts:[
-      Bodies.rectangle(0,  -32, 260, 66),
-      Bodies.rectangle(-80, 32, 100, 66),
-    ]
-  });
+  // Green — Vector-2.svg 301×176 (angled shape, approx rectangle)
+  const bLgreen = Bodies.rectangle(0, 0, 280, 160,
+    { restitution:0.5, friction:0.3, frictionAir:0.012, label:'lgreen' });
   Body.setPosition(bLgreen, { x: W()*0.73, y: H()*0.60 });
 
   [bCircle, bPlus, bLyellow, bLgreen].forEach(b => {
@@ -473,10 +463,10 @@
 
   // ── DOM sync ────────────────────────────────────────────────────
   const domShapes = [
-    { el: document.getElementById('s-circle'),  body: bCircle,  w: 220, h: 220 },
-    { el: document.getElementById('s-plus'),    body: bPlus,    w: 240, h: 240 },
-    { el: document.getElementById('s-lyellow'), body: bLyellow, w: 200, h: 270 },
-    { el: document.getElementById('s-lgreen'),  body: bLgreen,  w: 260, h: 165 },
+    { el: document.getElementById('s-circle'),  body: bCircle,  w: 191, h: 191 },
+    { el: document.getElementById('s-plus'),    body: bPlus,    w: 279, h: 279 },
+    { el: document.getElementById('s-lyellow'), body: bLyellow, w: 374, h: 265 },
+    { el: document.getElementById('s-lgreen'),  body: bLgreen,  w: 301, h: 176 },
   ];
 
   function syncDOM() {
