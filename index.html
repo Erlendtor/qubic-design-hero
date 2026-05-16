@@ -502,7 +502,7 @@
       const recent = mouseDragHistory.slice(-4);
       const vx = (recent[recent.length-1].x - recent[0].x) / (recent.length - 1);
       const vy = (recent[recent.length-1].y - recent[0].y) / (recent.length - 1);
-      Body.setVelocity(e.body, { x: vx * 1.8, y: vy * 1.8 });
+      Body.setVelocity(e.body, { x: vx * 0.8, y: vy * 0.8 });
     }
     mouseDragHistory = [];
   });
@@ -557,7 +557,7 @@
         const recent = state.history.slice(-4);
         const vx = (recent[recent.length-1].x - recent[0].x) / (recent.length - 1);
         const vy = (recent[recent.length-1].y - recent[0].y) / (recent.length - 1);
-        Body.setVelocity(state.body, { x: vx * 1.8, y: vy * 1.8 });
+        Body.setVelocity(state.body, { x: vx * 0.8, y: vy * 0.8 });
       }
       if (state.constraint) { World.remove(world, state.constraint); state.constraint = null; }
       if (state.grabbedEl)  { state.grabbedEl.classList.remove('grabbed'); state.grabbedEl = null; }
