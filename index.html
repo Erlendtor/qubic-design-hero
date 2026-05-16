@@ -478,22 +478,42 @@
     }
   }
 
-  // ── Mouse grab ──────────────────────────────────────────────────
+  // ── Mouse grab + throw ──────────────────────────────────────────
   const mouse = Mouse.create(hero);
   mouse.element.removeEventListener('mousewheel',     mouse.mousewheel);
   mouse.element.removeEventListener('DOMMouseScroll', mouse.mousewheel);
   const mc = MouseConstraint.create(engine, {
     mouse,
-    constraint: { stiffness: 0.2, render: { visible: false } }
+    // Higher stiffness = body follows cursor closely, so it has real velocity on release
+    constraint: { stiffness: 0.6, render: { visible: false } }
   });
   World.add(world, mc);
 
-  // ── Hand grab (supports two independent hands) ──────────────────
-  // One state object per hand index (0 = first hand, 1 = second hand)
+  // Track body position each frame while dragging so we can compute throw velocity
+  let mouseDragHistory = [];
+  Events.on(engine, 'beforeUpdate', () => {
+    if (mc.body) {
+      mouseDragHistory.push({ x: mc.body.position.x, y: mc.body.position.y });
+      if (mouseDragHistory.length > 6) mouseDragHistory.shift();
+    }
+  });
+  Events.on(mc, 'enddrag', (e) => {
+    if (mouseDragHistory.length >= 2) {
+      const recent = mouseDragHistory.slice(-4);
+      const vx = (recent[recent.length-1].x - recent[0].x) / (recent.length - 1);
+      const vy = (recent[recent.length-1].y - recent[0].y) / (recent.length - 1);
+      Body.setVelocity(e.body, { x: vx * 1.8, y: vy * 1.8 });
+    }
+    mouseDragHistory = [];
+  });
+
+  // ── Hand grab + throw (two independent hands) ───────────────────
   const handState = [0, 1].map(() => ({
     constraint: null,
     pinching:   false,
     grabbedEl:  null,
+    body:       null,
+    history:    [],   // recent {x,y} positions for throw velocity
   }));
 
   function heroCoords(nx, ny) {
@@ -505,29 +525,44 @@
     const { x, y } = heroCoords(nx, ny);
 
     if (isPinched && !state.pinching) {
+      // Start grab
       const hits   = Query.point(Composite.allBodies(world), { x, y });
       const target = hits.find(b => !b.isStatic);
       if (target) {
+        state.body = target;
         state.constraint = Constraint.create({
           pointA: { x, y },
           bodyB:  target,
           pointB: { x: x - target.position.x, y: y - target.position.y },
-          stiffness: 0.2,
+          stiffness: 0.6,
           length: 0,
         });
         World.add(world, state.constraint);
         const ds = domShapes.find(d => d.body === target);
         if (ds) { state.grabbedEl = ds.el; ds.el.classList.add('grabbed'); }
       }
+      state.history = [{ x, y }];
       state.pinching = true;
 
     } else if (isPinched && state.pinching && state.constraint) {
+      // Drag — update constraint anchor and record position
       state.constraint.pointA.x = x;
       state.constraint.pointA.y = y;
+      state.history.push({ x, y });
+      if (state.history.length > 6) state.history.shift();
 
     } else if (!isPinched && state.pinching) {
+      // Release — compute throw velocity from recent pinch movement
+      if (state.body && state.history.length >= 2) {
+        const recent = state.history.slice(-4);
+        const vx = (recent[recent.length-1].x - recent[0].x) / (recent.length - 1);
+        const vy = (recent[recent.length-1].y - recent[0].y) / (recent.length - 1);
+        Body.setVelocity(state.body, { x: vx * 1.8, y: vy * 1.8 });
+      }
       if (state.constraint) { World.remove(world, state.constraint); state.constraint = null; }
       if (state.grabbedEl)  { state.grabbedEl.classList.remove('grabbed'); state.grabbedEl = null; }
+      state.body    = null;
+      state.history = [];
       state.pinching = false;
     }
   };
